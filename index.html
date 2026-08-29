@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Maze English">
+    <title>まぜまぜ英語学習</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 0 20px;
+            line-height: 1.8;
+            color: #333;
+        }
+
+        .config-box {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .config-box input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            margin-top: 5px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            box-sizing: border-box;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 15px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+        }
+
+        button:disabled {
+            background: #aaa !important;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: #007bff;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+
+        .btn-secondary {
+            background: #28a745;
+        }
+
+        .btn-secondary:hover {
+            background: #1e7e34;
+        }
+
+        #output {
+            margin-top: 25px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 18px;
+            min-height: 100px;
+        }
+
+        .sentence {
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .sentence:hover {
+            background: #eef6ff;
+        }
+
+        .en {
+            color: #0056b3;
+            font-weight: bold;
+            background: #e8f0fe;
+        }
+
+        .ja {
+            color: #333;
+        }
+
+        .status {
+            color: #666;
+            font-style: italic;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>ローカル版 ミックス英語学習</h2>
+
+    <div class="config-box">
+        <label><strong>Gemini API Key:</strong></label>
+        <input type="password" id="apiKey" placeholder="AI Studioで取得したAPIキーを入力">
+    </div>
+
+    <div>
+        <label><strong>読みたい文章 (日本語または英語):</strong></label>
+        <textarea id="inputText" placeholder="文章を直接入力するか、下の「海外の英語記事を自動取得」を押してください..."></textarea>
+    </div>
+
+    <div class="btn-group">
+        <button id="processBtn" class="btn-primary" onclick="processText()">ミックス処理を開始</button>
+        <button id="fetchArticleBtn" class="btn-secondary" onclick="fetchEnglishArticle()">海外の英語記事を自動取得（約3000語）</button>
+    </div>
+
+    <div id="output">変換結果がここに表示されます。文をクリックすると日英が切り替わります。</div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedKey = localStorage.getItem("gemini_api_key");
+            if (savedKey) document.getElementById("apiKey").value = savedKey;
+        });
+
+        function getApiKey() {
+            const apiKey = document.getElementById("apiKey").value.trim();
+            if (!apiKey) {
+                alert("APIキーを入力してください。");
+                return null;
+            }
+            localStorage.setItem("gemini_api_key", apiKey);
+            return apiKey;
+        }
+
+        // 1. 海外記事（約3000語）を自動生成して入力欄にセットする処理
+        async function fetchEnglishArticle() {
+            const apiKey = getApiKey();
+            if (!apiKey) return;
+
+            const inputText = document.getElementById("inputText");
+            const fetchBtn = document.getElementById("fetchArticleBtn");
+            const processBtn = document.getElementById("processBtn");
+
+            fetchBtn.disabled = true;
+            processBtn.disabled = true;
+            inputText.value = "【取得中】海外の長文英語記事（テクノロジー・サイエンス・社会ニュースなど）を生成・取得しています...";
+
+            const prompt = `
+Write a comprehensive, highly engaging, and detailed long-form English news article or feature essay suitable for standard media reading.
+The topic should be about recent trends in technology, science, environment, or global society.
+The target length should be as close to 2,000 to 3,000 words as possible, structured with paragraphs.
+Do not include any Markdown headers (like # or ##) or meta text, just return the raw English prose text.
+`;
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
+
+                const articleText = data.candidates[0].content.parts[0].text.trim();
+                inputText.value = articleText;
+
+            } catch (err) {
+                inputText.value = "";
+                alert(`記事取得エラー: ${err.message}`);
+            } finally {
+                fetchBtn.disabled = false;
+                processBtn.disabled = false;
+                processText();
+            }
+        }
+
+        // 2. テキストのミックス処理
+        async function processText() {
+            const apiKey = getApiKey();
+            if (!apiKey) return;
+
+            const inputText = document.getElementById("inputText").value.trim();
+            const outputDiv = document.getElementById("output");
+            const btn = document.getElementById("processBtn");
+            const fetchBtn = document.getElementById("fetchArticleBtn");
+
+            if (!inputText) { alert("文章を入力するか、記事を自動取得してください。"); return; }
+
+            btn.disabled = true;
+            fetchBtn.disabled = true;
+            outputDiv.innerHTML = '<span class="status">AIが翻訳・ミックス処理を行っています（長文の場合は数秒かかります）...</span>';
+
+            const prompt = `
+入力された文章（英語または日本語）を自然な文単位で分割してください。
+そして、文章全体が「日本語と英語のミックス」になるように処理してください：
+- 元が英語の場合は、一部の文を日本語に翻訳する。
+- 元が日本語の場合は、一部の文を英語に翻訳する。
+全体の約40%〜50%が英語、残りが日本語になるようにバランスを調整してください。
+
+【厳格な出力フォーマット】
+以下のJSON配列形式のみで出力してください。説明文やMarkdown（\`\`\`json 等）は一切含めないでください。
+
+[
+  { "ja": "日本語訳文1", "en": "English sentence 1", "isEn": false },
+  { "ja": "日本語訳文2", "en": "English sentence 2", "isEn": true }
+]
+
+※ isEn は初期状態で表示したい言語のフラグです（英語表示なら true、日本語表示なら false）。
+
+入力文章:
+${inputText}
+`;
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
+
+                let rawText = data.candidates[0].content.parts[0].text.trim();
+                rawText = rawText.replace(/^```json/g, "").replace(/^```/g, "").replace(/```$/g, "").trim();
+
+                const sentences = JSON.parse(rawText);
+                renderSentences(sentences);
+
+            } catch (err) {
+                outputDiv.innerHTML = `<span style="color:red;">エラーが発生しました: ${err.message}<br>※文章が長すぎる場合は、少し長さを減らして試してください。</span>`;
+            } finally {
+                btn.disabled = false;
+                fetchBtn.disabled = false;
+            }
+        }
+
+        function renderSentences(sentences) {
+            const outputDiv = document.getElementById("output");
+            outputDiv.innerHTML = "";
+
+            sentences.forEach(item => {
+                const span = document.createElement("span");
+                span.className = "sentence " + (item.isEn ? "en" : "ja");
+                span.textContent = item.isEn ? item.en : item.ja;
+
+                span.onclick = () => {
+                    if (span.classList.contains("en")) {
+                        span.textContent = item.ja;
+                        span.className = "sentence ja";
+                    } else {
+                        span.textContent = item.en;
+                        span.className = "sentence en";
+                    }
+                };
+
+                outputDiv.appendChild(span);
+                outputDiv.appendChild(document.createTextNode(" "));
+            });
+        }
+    </script>
+</body>
+
+</html>
