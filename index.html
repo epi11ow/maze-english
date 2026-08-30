@@ -141,8 +141,24 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
+            // APIキーの復元
             const savedKey = localStorage.getItem("gemini_api_key");
             if (savedKey) document.getElementById("apiKey").value = savedKey;
+
+            // 保存された入力テキストの復元
+            const savedInputText = localStorage.getItem("saved_input_text");
+            if (savedInputText) document.getElementById("inputText").value = savedInputText;
+
+            // 保存されたミックス結果の復元
+            const savedSentences = localStorage.getItem("saved_sentences");
+            if (savedSentences) {
+                try {
+                    const sentences = JSON.parse(savedSentences);
+                    renderSentences(sentences);
+                } catch (e) {
+                    console.error("データの復元に失敗しました", e);
+                }
+            }
         });
 
         function getApiKey() {
@@ -187,6 +203,7 @@ Do not include any Markdown headers (like # or ##) or meta text, just return the
 
                 const articleText = data.candidates[0].content.parts[0].text.trim();
                 inputText.value = articleText;
+                localStorage.setItem("saved_input_text", articleText);
 
             } catch (err) {
                 inputText.value = "";
@@ -209,6 +226,9 @@ Do not include any Markdown headers (like # or ##) or meta text, just return the
             const fetchBtn = document.getElementById("fetchArticleBtn");
 
             if (!inputText) { alert("文章を入力するか、記事を自動取得してください。"); return; }
+
+            // 入力テキストを保存
+            localStorage.setItem("saved_input_text", inputText);
 
             btn.disabled = true;
             fetchBtn.disabled = true;
@@ -249,6 +269,10 @@ ${inputText}
                 rawText = rawText.replace(/^```json/g, "").replace(/^```/g, "").replace(/```$/g, "").trim();
 
                 const sentences = JSON.parse(rawText);
+
+                // 処理結果をlocalStorageに保存
+                localStorage.setItem("saved_sentences", JSON.stringify(sentences));
+
                 renderSentences(sentences);
 
             } catch (err) {
@@ -269,13 +293,14 @@ ${inputText}
                 span.textContent = item.isEn ? item.en : item.ja;
 
                 span.onclick = () => {
-                    if (span.classList.contains("en")) {
-                        span.textContent = item.ja;
-                        span.className = "sentence ja";
-                    } else {
-                        span.textContent = item.en;
-                        span.className = "sentence en";
-                    }
+                    // トグル状態を反転
+                    item.isEn = !item.isEn;
+
+                    span.textContent = item.isEn ? item.en : item.ja;
+                    span.className = "sentence " + (item.isEn ? "en" : "ja");
+
+                    // タップして言語を切り替えた状態も保存
+                    localStorage.setItem("saved_sentences", JSON.stringify(sentences));
                 };
 
                 outputDiv.appendChild(span);
