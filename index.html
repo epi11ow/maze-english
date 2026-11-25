@@ -136,7 +136,7 @@
 
     <div class="btn-group">
         <button id="processBtn" class="btn-primary" onclick="processText()">ミックス処理を開始</button>
-        <button id="fetchArticleBtn" class="btn-secondary" onclick="fetchEnglishArticle()">海外の英語記事を自動取得（約3000語）</button>
+        <button id="fetchArticleBtn" class="btn-secondary" onclick="fetchEnglishArticle()">海外の英語記事を自動取得</button>
     </div>
 
     <div id="output">変換結果がここに表示されます。文をクリックすると日英が切り替わります。</div>
@@ -184,13 +184,16 @@
 
             fetchBtn.disabled = true;
             processBtn.disabled = true;
-            inputText.value = "【取得中】海外の長文英語記事（テクノロジー・サイエンス・社会ニュースなど）を生成・取得しています...";
+            inputText.value = "【取得中】英語長文を生成・取得しています...";
 
             const prompt = `
-Write a comprehensive, highly engaging, and detailed long-form English news article or feature essay suitable for standard media reading.
-The topic should be about recent trends in technology, science, environment, or global society.
-The target length should be as close to 1,000 to 2,000 words as possible, structured with paragraphs.
-Do not include any Markdown headers (like # or ##) or meta text, just return the raw English prose text.
+Write a deeply informative, engaging, and nuanced long-form English feature essay suitable for a serious general-interest publication (such as The Atlantic, The Economist, or MIT Technology Review).
+
+Focus on a specific, concrete phenomenon, mechanism, or real-world tension within [technology / science / environment / global society]—avoid broad overviews or generic trend roundups. Prioritize lesser-known mechanics, empirical trade-offs, unintended consequences, or counterintuitive findings that give a thoughtful reader genuine new insight.
+
+Structure the essay seamlessly using well-crafted paragraphs without any Markdown headers (no # or ##), bullet lists, or meta commentary. Move organically from a compelling real-world hook or concrete case into how the underlying system works, why it matters now, where experts or stakeholders disagree, what limitations or hidden costs exist, and what open questions remain.
+
+Aim for roughly 300 to 500 words of rich, clear, vivid English prose. Return only the article text itself.
 `;
 
             try {
